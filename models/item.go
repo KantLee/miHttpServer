@@ -98,3 +98,9 @@ func UpdateItem(item_id int64, item *Item) (int64, error) {
 	}
 	return n, err
 }
+
+// 根据item_id查询数据，查询就不使用事务了
+func QueryItem(item_id int64, item *Item) (bool, error) {
+	success, err := engine.Where("item_id = ?", item_id).Get(item)
+	return success, err
+}

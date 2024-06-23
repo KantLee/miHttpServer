@@ -132,6 +132,44 @@ func UpdateData(ctx *gin.Context) {
 	}
 }
 
+// 查询商品信息
+func QueryData(ctx *gin.Context) {
+	itemIDStr := ctx.Param("item_id")
+	var response ResponseData
+	item_id, err := strconv.ParseInt(itemIDStr, 10, 64)
+	if err != nil {
+		response.Code = 1
+		response.Msg = "链接中的item_id非法"
+		response.Data = err.Error()
+		ctx.JSON(http.StatusBadRequest, response)
+	} else {
+		item := models.Item{}
+		success, err := models.QueryItem(item_id, &item)
+		if err != nil {
+			response.Code = 1
+			response.Msg = "查询数据失败"
+			response.Data = err.Error()
+			ctx.JSON(http.StatusInternalServerError, response)
+		} else if !success {
+			response.Code = 1
+			response.Msg = "未找到相关记录"
+			response.Data = fmt.Sprintf("item_id为%v的商品不存在", item_id)
+			ctx.JSON(http.StatusInternalServerError, response)
+		} else {
+			store_info := make(map[string]interface{})
+			store_info["store_info"] = map[string]interface{}{
+				"item_id": item.ItemID,
+				"name":    item.Name,
+				"price":   item.Price,
+			}
+			response.Code = 0
+			response.Msg = "成功"
+			response.Data = store_info
+			ctx.JSON(http.StatusOK, response)
+		}
+	}
+}
+
 func main() {
 	// 设置gin的运行模式，ReleaseMode表示生产模式，不显示日志的调试信息
 	gin.SetMode(gin.ReleaseMode)
@@ -185,14 +223,8 @@ func main() {
 	ginServer.POST("/item/:item_id", UpdateData)
 
 	// 查询商品信息
-	ginServer.GET("item/:item_id", func(ctx *gin.Context) {
-		response := ResponseData{
-			Code: 0,
-			Msg:  "成功",
-			Data: "暂无数据",
-		}
-		ctx.JSON(http.StatusOK, response)
-	})
+	ginServer.GET("item/:item_id", QueryData)
+
 	// 删除商品信息
 	ginServer.DELETE("/item/:item_id", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
