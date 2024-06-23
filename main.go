@@ -8,6 +8,7 @@ import (
 	"miHttpServer/models"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +26,7 @@ type ResponseData struct {
 }
 
 // 增加商品信息
-func AddItem(ctx *gin.Context) {
+func AddData(ctx *gin.Context) {
 	data, _ := ctx.GetRawData()
 	var response ResponseData
 	var jsonStr map[string]interface{}
@@ -33,7 +34,7 @@ func AddItem(ctx *gin.Context) {
 	// 这个只能判断json的key类型是否正确，不能判断value的类型是否正确
 	if err != nil {
 		response.Code = 1
-		response.Msg = "客户端传递参数错误"
+		response.Msg = "客户端传递的json非法"
 		response.Data = err.Error()
 		ctx.JSON(http.StatusBadRequest, response)
 	} else {
@@ -41,7 +42,7 @@ func AddItem(ctx *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
 				response.Code = 1
-				response.Msg = "客户端传递参数错误"
+				response.Msg = "客户端传递的json值无效"
 				response.Data = err.(error).Error()
 				ctx.JSON(http.StatusInternalServerError, response)
 			}
@@ -67,6 +68,66 @@ func AddItem(ctx *gin.Context) {
 			response.Msg = "成功"
 			response.Data = item_info
 			ctx.JSON(http.StatusOK, response)
+		}
+	}
+}
+
+// 修改商品信息
+func UpdateData(ctx *gin.Context) {
+	itemIDStr := ctx.Param("item_id")
+	var response ResponseData
+	item_id, err := strconv.ParseInt(itemIDStr, 10, 64)
+	if err != nil {
+		response.Code = 1
+		response.Msg = "链接中的item_id非法"
+		response.Data = err.Error()
+		ctx.JSON(http.StatusBadRequest, response)
+	} else {
+		data, _ := ctx.GetRawData()
+		var jsonStr map[string]interface{}
+		err = json.Unmarshal(data, &jsonStr)
+		if err != nil {
+			response.Code = 1
+			response.Msg = "客户端传递的json非法"
+			response.Data = err.Error()
+			ctx.JSON(http.StatusBadRequest, response)
+		} else {
+			defer func() {
+				if err := recover(); err != nil {
+					response.Code = 1
+					response.Msg = "客户端传递的json值无效"
+					response.Data = err.(error).Error()
+					ctx.JSON(http.StatusInternalServerError, response)
+				}
+			}()
+			item := models.Item{
+				ItemID: item_id,
+				Name:   jsonStr["name"].(string),
+				Price:  jsonStr["price"].(float64),
+			}
+			n, err := models.UpdateItem(item_id, &item)
+			if err != nil {
+				response.Code = 1
+				response.Msg = "更新数据失败，item_id：" + itemIDStr
+				response.Data = err.Error()
+				ctx.JSON(http.StatusInternalServerError, response)
+			} else if n == 0 {
+				response.Code = 1
+				response.Msg = "未找到相关记录"
+				response.Data = fmt.Sprintf("item_id为%v的商品不存在", item_id)
+				ctx.JSON(http.StatusInternalServerError, response)
+			} else {
+				store_info := make(map[string]interface{})
+				store_info["store_info"] = map[string]interface{}{
+					"item_id": item.ItemID,
+					"name":    item.Name,
+					"price":   item.Price,
+				}
+				response.Code = 0
+				response.Msg = "成功"
+				response.Data = store_info
+				ctx.JSON(http.StatusOK, response)
+			}
 		}
 	}
 }
@@ -117,18 +178,12 @@ func main() {
 	}
 
 	// 增加商品信息（从JSON获取）
-	ginServer.PUT("/item", AddItem)
-	ginServer.POST("/item", AddItem)
+	ginServer.PUT("/item", AddData)
+	ginServer.POST("/item", AddData)
 
 	// 修改商品信息
-	ginServer.POST("/item/:item_id", func(ctx *gin.Context) {
-		response := ResponseData{
-			Code: 0,
-			Msg:  "成功",
-			Data: "暂无数据",
-		}
-		ctx.JSON(http.StatusOK, response)
-	})
+	ginServer.POST("/item/:item_id", UpdateData)
+
 	// 查询商品信息
 	ginServer.GET("item/:item_id", func(ctx *gin.Context) {
 		response := ResponseData{

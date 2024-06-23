@@ -19,7 +19,8 @@ type Item struct {
 	UpdatedAt time.Time `xorm:"updated" json:"updated_at"`
 }
 
-var Engine *xorm.Engine
+var engine *xorm.Engine
+var session *xorm.Session
 
 func InitDB() error {
 	// 数据库连接基本信息
@@ -31,33 +32,37 @@ func InitDB() error {
 		dbName    string = "miHttpServer"
 		charset   string = "utf8mb4"
 	)
-	var err error
 	// 构建数据库的连接信息
 	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s", userName, password, ipAddress, port, dbName, charset)
-	Engine, err = xorm.NewEngine("mysql", dataSourceName)
+	var err error
+	engine, err = xorm.NewEngine("mysql", dataSourceName)
 	if err != nil {
 		return err
 	}
-	err = Engine.Sync2(new(Item))
+	err = engine.Sync2(new(Item))
 	if err != nil {
 		return err
 	}
-	// 日志相关设置
-	Engine.ShowSQL(true) // 开启SQL语句记录
-	// 设置日志记录级别
-	Engine.Logger().SetLevel(log.LOG_DEBUG)
+
 	// 设置日志记录的文件
 	f, err := os.Create("./logs/xorm.log")
 	if err != nil {
 		fmt.Println("数据库日志文件创建失败:", err)
 	} else {
-		Engine.SetLogger(log.NewSimpleLogger(f))
+		engine.SetLogger(log.NewSimpleLogger(f))
 	}
+	// 日志相关设置
+	engine.ShowSQL(true) // 开启SQL语句记录
+	// 设置日志记录级别
+	engine.Logger().SetLevel(log.LOG_DEBUG)
+	session = engine.NewSession()
+
 	return nil
 }
 
+// 插入数据
 func InsertItem(item *Item) (int64, error) {
-	session := Engine.NewSession()
+	session.Begin()
 	defer session.Close()
 	defer func() {
 		if err := recover(); err != nil {
@@ -66,5 +71,27 @@ func InsertItem(item *Item) (int64, error) {
 			session.Commit()
 		}
 	}()
-	return Engine.Insert(item)
+	n, err := session.Insert(item)
+	if err != nil {
+		panic(err)
+	}
+	return n, err
+}
+
+// 更新数据
+func UpdateItem(item_id int64, item *Item) (int64, error) {
+	session.Begin()
+	defer session.Close()
+	defer func() {
+		if err := recover(); err != nil {
+			session.Rollback()
+		} else {
+			session.Commit()
+		}
+	}()
+	n, err := session.Where("item_id = ?", item_id).Update(item)
+	if err != nil {
+		panic(err)
+	}
+	return n, err
 }
