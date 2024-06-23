@@ -58,15 +58,15 @@ func AddData(ctx *gin.Context) {
 			response.Data = err.Error()
 			ctx.JSON(http.StatusInternalServerError, response)
 		} else {
-			item_info := make(map[string]interface{})
-			item_info["item_info"] = map[string]interface{}{
+			itemInfo := make(map[string]interface{})
+			itemInfo["item_info"] = map[string]interface{}{
 				"item_id": item.ItemID,
 				"name":    item.Name,
 				"price":   item.Price,
 			}
 			response.Code = 0
 			response.Msg = "成功"
-			response.Data = item_info
+			response.Data = itemInfo
 			ctx.JSON(http.StatusOK, response)
 		}
 	}
@@ -117,15 +117,15 @@ func UpdateData(ctx *gin.Context) {
 				response.Data = fmt.Sprintf("item_id为%v的商品不存在", item_id)
 				ctx.JSON(http.StatusInternalServerError, response)
 			} else {
-				store_info := make(map[string]interface{})
-				store_info["store_info"] = map[string]interface{}{
+				storeInfo := make(map[string]interface{})
+				storeInfo["store_info"] = map[string]interface{}{
 					"item_id": item.ItemID,
 					"name":    item.Name,
 					"price":   item.Price,
 				}
 				response.Code = 0
 				response.Msg = "成功"
-				response.Data = store_info
+				response.Data = storeInfo
 				ctx.JSON(http.StatusOK, response)
 			}
 		}
@@ -156,15 +156,48 @@ func QueryData(ctx *gin.Context) {
 			response.Data = fmt.Sprintf("item_id为%v的商品不存在", item_id)
 			ctx.JSON(http.StatusInternalServerError, response)
 		} else {
-			store_info := make(map[string]interface{})
-			store_info["store_info"] = map[string]interface{}{
+			storeInfo := make(map[string]interface{})
+			storeInfo["store_info"] = map[string]interface{}{
 				"item_id": item.ItemID,
 				"name":    item.Name,
 				"price":   item.Price,
 			}
 			response.Code = 0
 			response.Msg = "成功"
-			response.Data = store_info
+			response.Data = storeInfo
+			ctx.JSON(http.StatusOK, response)
+		}
+	}
+}
+
+// 删除商品信息
+func DeleteData(ctx *gin.Context) {
+	itemIDStr := ctx.Param("item_id")
+	var response ResponseData
+	item_id, err := strconv.ParseInt(itemIDStr, 10, 64)
+	if err != nil {
+		response.Code = 1
+		response.Msg = "链接中的item_id非法"
+		response.Data = err.Error()
+		ctx.JSON(http.StatusBadRequest, response)
+	} else {
+		n, err := models.DeleteItem(item_id)
+		if err != nil {
+			response.Code = 1
+			response.Msg = "查询数据失败"
+			response.Data = err.Error()
+			ctx.JSON(http.StatusInternalServerError, response)
+		} else if n == 0 {
+			response.Code = 1
+			response.Msg = "未找到相关记录"
+			response.Data = fmt.Sprintf("item_id为%v的商品不存在", item_id)
+			ctx.JSON(http.StatusInternalServerError, response)
+		} else {
+			deleteTime := make(map[string]string, 1)
+			deleteTime["delete_time"] = time.Now().Format("2006-01-02 15:04:05")
+			response.Code = 0
+			response.Msg = "成功"
+			response.Data = deleteTime
 			ctx.JSON(http.StatusOK, response)
 		}
 	}
@@ -226,13 +259,8 @@ func main() {
 	ginServer.GET("item/:item_id", QueryData)
 
 	// 删除商品信息
-	ginServer.DELETE("/item/:item_id", func(ctx *gin.Context) {
-		ctx.JSON(http.StatusOK, gin.H{
-			"code": 0,
-			"msg":  "成功",
-			"data": "暂无数据",
-		})
-	})
+	ginServer.DELETE("/item/:item_id", DeleteData)
+
 	err = ginServer.Run(":8080")
 	if err != nil {
 		log.Fatal("项目启动失败:", err)

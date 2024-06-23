@@ -104,3 +104,21 @@ func QueryItem(item_id int64, item *Item) (bool, error) {
 	success, err := engine.Where("item_id = ?", item_id).Get(item)
 	return success, err
 }
+
+// 根据item_id删除数据
+func DeleteItem(item_id int64) (int64, error) {
+	session.Begin()
+	defer session.Close()
+	defer func() {
+		if err := recover(); err != nil {
+			session.Rollback()
+		} else {
+			session.Commit()
+		}
+	}()
+	n, err := session.ID(item_id).Delete(&Item{})
+	if err != nil {
+		panic(err)
+	}
+	return n, err
+}
