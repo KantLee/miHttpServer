@@ -39,10 +39,6 @@ func InitDB() error {
 	if err != nil {
 		return err
 	}
-	err = engine.Sync2(new(Item))
-	if err != nil {
-		return err
-	}
 
 	// 设置日志记录的文件
 	f, err := os.Create("./logs/xorm.log")
@@ -55,6 +51,13 @@ func InitDB() error {
 	engine.ShowSQL(true) // 开启SQL语句记录
 	// 设置日志记录级别
 	engine.Logger().SetLevel(log.LOG_DEBUG)
+
+	// 同步表结构
+	err = engine.Sync2(new(Item))
+	if err != nil {
+		return err
+	}
+
 	session = engine.NewSession()
 
 	return nil
