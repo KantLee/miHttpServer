@@ -215,32 +215,11 @@ func main() {
 
 	// 创建一个服务（不使用默认的中间件）
 	ginServer := gin.New()
-	//使用自定义的控制台日志格式
+	// 使用自定义的控制台日志格式
 	ginServer.Use(gin.LoggerWithFormatter(middlewares.CustomConsoleLogger))
-
-	// 自定义文件日志输出格式
-	customFileLogger := func(params gin.LogFormatterParams) string {
-		return fmt.Sprintf(
-			"[miHttpServer] %s |%d|  %s	 %s\n",
-			params.TimeStamp.Format("2006-01-02 15:04:05"),
-			params.StatusCode,
-			params.Method,
-			params.Path,
-		)
-	}
 	// 使用自定义的文件日志格式
-	ginServer.Use(func(ctx *gin.Context) {
-		// 确保按顺序执行中间件链中的下一个中间件
-		ctx.Next()
-		param := gin.LogFormatterParams{
-			TimeStamp:  time.Now(),
-			StatusCode: ctx.Writer.Status(),
-			Method:     ctx.Request.Method,
-			Path:       ctx.Request.URL.Path,
-		}
-		// 记录日志到文件
-		ginLogFile.WriteString(customFileLogger(param))
-	})
+	ginServer.Use(middlewares.CustomFileLogger(ginLogFile))
+	// 防止服务器产生panic而崩溃，同时返回一个500的HTTP状态码
 	ginServer.Use(gin.Recovery())
 	// 连接数据库
 	err = models.InitDB()
