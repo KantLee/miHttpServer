@@ -8,6 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type ResponseData struct {
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data"`
+}
+
 // 自定义控制台日志输出格式
 func CustomConsoleLogger(params gin.LogFormatterParams) string {
 	return fmt.Sprintf(
@@ -41,5 +47,31 @@ func CustomFileLogger(ginLogFile *os.File) gin.HandlerFunc {
 			params.Method,
 			params.Path,
 		))
+	}
+}
+
+// 根据请求URL的app_local参数设置请求头
+func SetAppLocal() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		response := ResponseData{}
+		appLocal := ctx.Param("app_local")
+		if appLocal == "" {
+			response.Code = 1
+			response.Msg = "请求参数app_local为空"
+			response.Data = "缺少app_local参数，应为uk、jp和ru中的一个，例如http://localhost:8080/uk/item/"
+			ctx.JSON(400, response)
+			ctx.Abort()
+			return
+		} else if appLocal != "uk" && appLocal != "jp" && appLocal != "ru" {
+			response.Code = 1
+			response.Msg = "请求参数app_local非法"
+			response.Data = "app_local参数应为uk、jp和ru中的一个，例如http://localhost:8080/uk/item/"
+			ctx.JSON(400, response)
+			ctx.Abort()
+			return
+		} else {
+			ctx.Header("app_local", appLocal)
+			ctx.Next()
+		}
 	}
 }

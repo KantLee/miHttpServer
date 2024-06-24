@@ -172,6 +172,23 @@ func QueryData(ctx *gin.Context) {
 
 // 删除商品信息
 func DeleteData(ctx *gin.Context) {
+	// 获取当前的UTC时间
+	utcNow := time.Now().UTC()
+	var location *time.Location
+	var err error
+	appLocal := ctx.Param("app_local")
+	switch appLocal {
+	case "uk":
+		location, _ = time.LoadLocation("Europe/London")
+	case "jp":
+		location, _ = time.LoadLocation("Asia/Tokyo")
+	case "ru":
+		location, _ = time.LoadLocation("Europe/Moscow")
+	}
+	// 将 UTC 时间转换为当地时间
+	localTime := utcNow.In(location)
+	// 格式化时间
+	formattedTime := localTime.Format("2006-01-02 15:04:05")
 	itemIDStr := ctx.Param("item_id")
 	var response ResponseData
 	item_id, err := strconv.ParseInt(itemIDStr, 10, 64)
@@ -194,7 +211,7 @@ func DeleteData(ctx *gin.Context) {
 			ctx.JSON(http.StatusInternalServerError, response)
 		} else {
 			deleteTime := make(map[string]string, 1)
-			deleteTime["delete_time"] = time.Now().Format("2006-01-02 15:04:05")
+			deleteTime["delete_time"] = formattedTime
 			response.Code = 0
 			response.Msg = "成功"
 			response.Data = deleteTime
@@ -221,6 +238,8 @@ func main() {
 	ginServer.Use(middlewares.CustomFileLogger(ginLogFile))
 	// 防止服务器产生panic而崩溃，同时返回一个500的HTTP状态码
 	ginServer.Use(gin.Recovery())
+	// 请求头根据url添加app_local参数
+	ginServer.Use(middlewares.SetAppLocal())
 	// 连接数据库
 	err = models.InitDB()
 	if err != nil {
@@ -228,17 +247,17 @@ func main() {
 	}
 
 	// 增加商品信息（从JSON获取）
-	ginServer.PUT("/item", AddData)
-	ginServer.POST("/item", AddData)
+	ginServer.PUT("/:app_local/item", AddData)
+	ginServer.POST("/:app_local/item", AddData)
 
 	// 修改商品信息
-	ginServer.POST("/item/:item_id", UpdateData)
+	ginServer.POST("/:app_local/item/:item_id", UpdateData)
 
 	// 查询商品信息
-	ginServer.GET("item/:item_id", QueryData)
+	ginServer.GET("/:app_local/item/:item_id", QueryData)
 
 	// 删除商品信息
-	ginServer.DELETE("/item/:item_id", DeleteData)
+	ginServer.DELETE("/:app_local/item/:item_id", DeleteData)
 
 	err = ginServer.Run(":8080")
 	if err != nil {
