@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"miHttpServer/databases"
 	"miHttpServer/middlewares"
-	"miHttpServer/models"
 	"net/http"
 	"os"
 	"strconv"
@@ -47,11 +47,11 @@ func AddData(ctx *gin.Context) {
 				ctx.JSON(http.StatusInternalServerError, response)
 			}
 		}()
-		item := models.Item{
+		item := databases.Item{
 			Name:  jsonStr["name"].(string),
 			Price: jsonStr["price"].(float64),
 		}
-		_, err = models.InsertItem(&item)
+		_, err = databases.InsertItem(&item)
 		if err != nil {
 			response.Code = 1
 			response.Msg = "插入数据失败"
@@ -100,12 +100,12 @@ func UpdateData(ctx *gin.Context) {
 					ctx.JSON(http.StatusInternalServerError, response)
 				}
 			}()
-			item := models.Item{
+			item := databases.Item{
 				ItemID: item_id,
 				Name:   jsonStr["name"].(string),
 				Price:  jsonStr["price"].(float64),
 			}
-			n, err := models.UpdateItem(item_id, &item)
+			n, err := databases.UpdateItem(item_id, &item)
 			if err != nil {
 				response.Code = 1
 				response.Msg = "更新数据失败，item_id：" + itemIDStr
@@ -143,8 +143,8 @@ func QueryData(ctx *gin.Context) {
 		response.Data = err.Error()
 		ctx.JSON(http.StatusBadRequest, response)
 	} else {
-		item := models.Item{}
-		success, err := models.QueryItem(item_id, &item)
+		item := databases.Item{}
+		success, err := databases.QueryItem(item_id, &item)
 		if err != nil {
 			response.Code = 1
 			response.Msg = "查询数据失败"
@@ -198,7 +198,7 @@ func DeleteData(ctx *gin.Context) {
 		response.Data = err.Error()
 		ctx.JSON(http.StatusBadRequest, response)
 	} else {
-		n, err := models.DeleteItem(item_id)
+		n, err := databases.DeleteItem(item_id)
 		if err != nil {
 			response.Code = 1
 			response.Msg = "查询数据失败"
@@ -241,7 +241,7 @@ func main() {
 	// 请求头根据url添加app_local参数
 	ginServer.Use(middlewares.SetAppLocal())
 	// 连接数据库
-	err = models.InitDB()
+	err = databases.InitMySQL()
 	if err != nil {
 		log.Fatalln("连接数据库失败:", err)
 	}
