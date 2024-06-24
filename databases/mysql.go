@@ -20,7 +20,6 @@ type Item struct {
 }
 
 var engine *xorm.Engine
-var session *xorm.Session
 
 func InitMySQL() error {
 	// 数据库连接基本信息
@@ -58,15 +57,21 @@ func InitMySQL() error {
 		return err
 	}
 
-	session = engine.NewSession()
-
 	return nil
+}
+
+// 关闭MySQL连接
+func CloseMySQL() {
+	if engine != nil {
+		engine.Close()
+	}
 }
 
 // 插入数据
 func InsertItem(item *Item) (int64, error) {
-	session.Begin()
+	session := engine.NewSession()
 	defer session.Close()
+	session.Begin()
 	defer func() {
 		if err := recover(); err != nil {
 			session.Rollback()
@@ -83,8 +88,9 @@ func InsertItem(item *Item) (int64, error) {
 
 // 更新数据
 func UpdateItem(item_id int64, item *Item) (int64, error) {
-	session.Begin()
+	session := engine.NewSession()
 	defer session.Close()
+	session.Begin()
 	defer func() {
 		if err := recover(); err != nil {
 			session.Rollback()
@@ -107,8 +113,9 @@ func QueryItem(item_id int64, item *Item) (bool, error) {
 
 // 根据item_id删除数据
 func DeleteItem(item_id int64) (int64, error) {
-	session.Begin()
+	session := engine.NewSession()
 	defer session.Close()
+	session.Begin()
 	defer func() {
 		if err := recover(); err != nil {
 			session.Rollback()

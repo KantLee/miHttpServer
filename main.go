@@ -240,11 +240,17 @@ func main() {
 	ginServer.Use(gin.Recovery())
 	// 请求头根据url添加app_local参数
 	ginServer.Use(middlewares.SetAppLocal())
-	// 连接数据库
+	// 连接MySQL
 	err = databases.InitMySQL()
 	if err != nil {
 		log.Fatalln("连接数据库失败:", err)
 	}
+	// 关闭MySQL连接
+	defer databases.CloseMySQL()
+	// 连接redis
+	databases.InitRedis()
+	// 关闭redis连接
+	defer databases.CloseRedis()
 
 	// 增加商品信息（从JSON获取）
 	ginServer.PUT("/:app_local/item", AddData)
