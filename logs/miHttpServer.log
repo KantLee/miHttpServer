@@ -1,0 +1,8 @@
+[miHttpServer] 2024/06/25 15:41:51 Redis连接池创建成功
+[miHttpServer] 2024/06/25 15:42:19 增加商品，item_id: 20，name：小米12 Ultra
+[miHttpServer] 2024/06/25 15:42:22 增加商品，item_id: 21，name：小米13 Ultra
+[miHttpServer] 2024/06/25 15:42:26 增加商品，item_id: 22，name：小米14 Ultra
+[miHttpServer] 2024/06/25 15:42:38 修改商品，item_id: 22，name：小米15 Ultra
+[miHttpServer] 2024/06/25 15:42:57 英国站点删除商品，item_id: 18，当地时间：2024-06-25 08:42:57
+[miHttpServer] 2024/06/25 15:43:06 日本站点删除商品，item_id: 19，当地时间：2024-06-25 16:43:06
+[miHttpServer] 2024/06/25 15:43:26 俄罗斯站点删除商品，item_id: 20，当地时间：2024-06-25 10:43:26
