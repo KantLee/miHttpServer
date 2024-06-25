@@ -2,12 +2,13 @@ package databases
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"xorm.io/xorm"
-	"xorm.io/xorm/log"
+	xormLog "xorm.io/xorm/log"
 )
 
 // 定义一个和表同步的结构体
@@ -42,14 +43,15 @@ func InitMySQL() error {
 	// 设置日志记录的文件
 	f, err := os.Create("./logs/xorm.log")
 	if err != nil {
-		fmt.Println("数据库日志文件创建失败:", err)
+		log.Fatalln("数据库日志文件创建失败:", err)
 	} else {
-		engine.SetLogger(log.NewSimpleLogger(f))
+		engine.SetLogger(xormLog.NewSimpleLogger(f))
 	}
+	defer f.Close()
 	// 日志相关设置
 	engine.ShowSQL(true) // 开启SQL语句记录
 	// 设置日志记录级别
-	engine.Logger().SetLevel(log.LOG_DEBUG)
+	engine.Logger().SetLevel(xormLog.LOG_DEBUG)
 
 	// 同步表结构
 	err = engine.Sync2(new(Item))

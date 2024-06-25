@@ -17,7 +17,7 @@ type ResponseData struct {
 // 自定义控制台日志输出格式
 func CustomConsoleLogger(params gin.LogFormatterParams) string {
 	return fmt.Sprintf(
-		"[miHttpServer] %s |%s %d %s|  %s %s %s	 %s\n",
+		"[miHttpServerGin] %s |%s %d %s|  %s %s %s	 %s\n",
 		params.TimeStamp.Format("2006-01-02 15:04:05"),
 		params.StatusCodeColor(),
 		params.StatusCode,
@@ -41,7 +41,7 @@ func CustomFileLogger(ginLogFile *os.File) gin.HandlerFunc {
 		}
 		// 记录日志到文件
 		ginLogFile.WriteString(fmt.Sprintf(
-			"[miHttpServer] %s |%d|  %s	 %s\n",
+			"[miHttpServerGin] %s |%d|  %s	 %s\n",
 			params.TimeStamp.Format("2006-01-02 15:04:05"),
 			params.StatusCode,
 			params.Method,

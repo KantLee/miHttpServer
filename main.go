@@ -287,12 +287,25 @@ func DeleteData(ctx *gin.Context) {
 }
 
 func main() {
+	// 确保logs目录存在
+	if err := os.MkdirAll("./logs", 0755); err != nil {
+		log.Fatalf("创建logs目录失败: %v", err)
+	}
 	// 设置gin的运行模式，ReleaseMode表示生产模式，不显示日志的调试信息
 	gin.SetMode(gin.ReleaseMode)
-	// 设置日志文件
-	ginLogFile, err := os.Create("./logs/miHttpServer.log")
+	// 设置全局的运行日志文件
+	logFile, err := os.OpenFile("./logs/miHttpServer.log", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
 	if err != nil {
-		log.Printf("无法创建日志文件: %v\n", err)
+		log.Fatal(err)
+	}
+	defer logFile.Close()
+	log.SetPrefix("[miHttpServer] ")
+	log.SetOutput(logFile)
+
+	// 设置Gin日志文件
+	ginLogFile, err := os.Create("./logs/gin.log")
+	if err != nil {
+		log.Printf("无法创建Gin日志文件: %v\n", err)
 	}
 	defer ginLogFile.Close()
 
@@ -313,6 +326,7 @@ func main() {
 	}
 	// 关闭MySQL连接
 	defer databases.CloseMySQL()
+
 	// 连接redis
 	databases.InitRedis()
 	// 关闭redis连接
