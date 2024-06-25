@@ -56,6 +56,7 @@ func SetAppLocal() gin.HandlerFunc {
 		response := ResponseData{}
 		appLocal := ctx.Param("app_local")
 		if appLocal == "" {
+			// @warn: 错误处理组件
 			response.Code = 1
 			response.Msg = "请求参数app_local为空"
 			response.Data = "缺少app_local参数，应为uk、jp和ru中的一个，例如http://localhost:8080/uk/item/"

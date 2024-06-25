@@ -25,6 +25,7 @@ var engine *xorm.Engine
 func InitMySQL() error {
 	// 数据库连接基本信息
 	var (
+		// @warn 配置文件
 		userName  string = "root"
 		password  string = "admin"
 		ipAddress string = "192.168.96.130"
@@ -40,6 +41,7 @@ func InitMySQL() error {
 		return err
 	}
 
+	// 文件初始化放一起
 	// 设置日志记录的文件
 	f, err := os.Create("./logs/xorm.log")
 	if err != nil {
@@ -71,6 +73,7 @@ func CloseMySQL() {
 
 // 插入数据
 func InsertItem(item *Item) (int64, error) {
+	// @warn 大部分场景不需要事务处理，特别是单 SQL，数据库默认配置自动提交
 	session := engine.NewSession()
 	defer session.Close()
 	session.Begin()
@@ -83,6 +86,7 @@ func InsertItem(item *Item) (int64, error) {
 	}()
 	n, err := session.Insert(item)
 	if err != nil {
+		// @warn panic 是终止程序使用，过程处理使用 error
 		panic(err)
 	}
 	return n, err

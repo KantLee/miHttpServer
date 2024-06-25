@@ -1,6 +1,6 @@
 module miHttpServer
 
-go 1.22.4
+go 1.18
 
 require (
 	github.com/gin-gonic/gin v1.10.0

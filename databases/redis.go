@@ -138,8 +138,11 @@ func Lock(key string, requestID string, expireSec uint64, maxWait time.Duration)
 	defer conn.Close()
 
 	for startTime := time.Now(); time.Since(startTime) < maxWait; {
+
 		ok, err := SetNx(conn, key, requestID, expireSec)
 		if err != nil {
+			// @warn 错误信息向上传递，而不是记录日志。日志没有额外信息透出时，尽量只在处理终止时记录
+			// "github.com/pkg/errors"是个不错的库，errors.Wrap(err, "获取分布式锁失败", + ",key:" + key)
 			log.Println("获取分布式锁失败", ",key:", key, ",error:", err)
 			return false, err
 		}
@@ -156,7 +159,7 @@ func Lock(key string, requestID string, expireSec uint64, maxWait time.Duration)
 func Unlock(key string) error {
 	conn := pool.Get()
 	defer conn.Close()
-
+	// @warn 无唯一 ID 校验，可能会造成其他其他协程误释放
 	_, err := Del(conn, key)
 	if err != nil {
 		log.Println("释放锁失败", ",key:", key, ",error:", err)
