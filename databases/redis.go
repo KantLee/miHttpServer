@@ -131,3 +131,63 @@ func DeleteItemCache(itemID int64) error {
 	_, err := conn.Do("DEL", key)
 	return err
 }
+
+// Lock 尝试获取分布式锁
+func Lock(key string, requestID string, expireSec uint64, maxWait time.Duration) (bool, error) {
+	conn := pool.Get()
+	defer conn.Close()
+
+	for startTime := time.Now(); time.Since(startTime) < maxWait; {
+		ok, err := SetNx(conn, key, requestID, expireSec)
+		if err != nil {
+			log.Println("获取分布式锁失败", ",key:", key, ",error:", err)
+			return false, err
+		}
+		if ok {
+			return ok, nil
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	log.Println("获取分布式锁超时", ",key:", key)
+	return false, nil
+}
+
+// Unlock 释放分布式锁
+func Unlock(key string) error {
+	conn := pool.Get()
+	defer conn.Close()
+
+	_, err := Del(conn, key)
+	if err != nil {
+		log.Println("释放锁失败", ",key:", key, ",error:", err)
+		return err
+	} else {
+		log.Println("释放锁成功", ",key:", key)
+		return nil
+	}
+}
+
+// SetNx 设置键值对，如果键不存在
+func SetNx(conn redis.Conn, key string, value string, seconds uint64) (bool, error) {
+	// "EX" 表示过期时间，"NX" 表示只有键不存在时才设置
+	res, err := redis.String(conn.Do("SET", key, value, "EX", seconds, "NX"))
+	if err == redis.ErrNil {
+		// 键已存在
+		return false, nil
+	} else if err != nil {
+		log.Println("SetNx Error: ", err)
+		return false, err
+	}
+	log.Println("Redis SetNx", ",key:", key, ",seconds:", seconds, ",res:", res)
+	return res == "OK", nil
+}
+
+// Del 删除键
+func Del(conn redis.Conn, key string) (bool, error) {
+	_, err := redis.Int(conn.Do("DEL", key))
+	if err != nil {
+		log.Println("删除键错误，err", "err", err)
+		return false, err
+	}
+	return true, nil
+}

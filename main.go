@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 /*
@@ -39,6 +40,19 @@ func AddData(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, response)
 		return
 	}
+	// 尝试获取分布式锁
+	requestID := uuid.New().String()
+	lockKey := fmt.Sprintf("item_lock_name_%s", jsonStr["name"].(string))
+	locked, err := databases.Lock(lockKey, requestID, 30, 5*time.Second)
+	if err != nil || !locked {
+		response.Code = 1
+		response.Msg = "无法获取锁"
+		response.Data = "请稍后再试"
+		ctx.JSON(http.StatusConflict, response)
+		return
+	}
+	defer databases.Unlock(lockKey) // 确保最后释放锁
+
 	// 如果json的value类型不正确，会导致panic
 	defer func() {
 		if err := recover(); err != nil {
@@ -96,6 +110,18 @@ func UpdateData(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, response)
 		return
 	}
+	// 尝试获取分布式锁
+	requestID := uuid.New().String()
+	lockKey := fmt.Sprintf("item_lock_id_%s", itemIDStr)
+	locked, err := databases.Lock(lockKey, requestID, 30, 5*time.Second)
+	if err != nil || !locked {
+		response.Code = 1
+		response.Msg = "无法获取锁"
+		response.Data = "请稍后再试"
+		ctx.JSON(http.StatusConflict, response)
+		return
+	}
+	defer databases.Unlock(lockKey) // 确保最后释放锁
 
 	defer func() {
 		if err := recover(); err != nil {
