@@ -69,6 +69,7 @@ func AddData(ctx *gin.Context) {
 		response.Msg = "成功"
 		response.Data = itemInfo
 		ctx.JSON(http.StatusOK, response)
+		log.Printf("增加商品，item_id: %d，name：%s", item.ItemID, item.Name)
 	}
 }
 
@@ -131,6 +132,8 @@ func UpdateData(ctx *gin.Context) {
 		response.Msg = "成功"
 		response.Data = storeInfo
 		ctx.JSON(http.StatusOK, response)
+		log.Printf("修改商品，item_id: %d，name：%s", item.ItemID, item.Name)
+
 		// 查找redis缓存中是否有相同数据
 		itemCache := databases.ItemCache{}
 		ok, err := databases.QueryItemCache(item_id, &itemCache)
@@ -227,13 +230,17 @@ func DeleteData(ctx *gin.Context) {
 	var location *time.Location
 	var err error
 	appLocal := ctx.Param("app_local")
+	var localCountry string
 	switch appLocal {
 	case "uk":
 		location, _ = time.LoadLocation("Europe/London")
+		localCountry = "英国"
 	case "jp":
 		location, _ = time.LoadLocation("Asia/Tokyo")
+		localCountry = "日本"
 	case "ru":
 		location, _ = time.LoadLocation("Europe/Moscow")
+		localCountry = "俄罗斯"
 	}
 	// 将 UTC 时间转换为当地时间
 	localTime := utcNow.In(location)
@@ -269,6 +276,8 @@ func DeleteData(ctx *gin.Context) {
 		response.Msg = "成功"
 		response.Data = deleteTime
 		ctx.JSON(http.StatusOK, response)
+		log.Printf("%s站点删除商品，item_id: %d，当地时间：%s", localCountry, item_id, formattedTime)
+
 		// 查找redis缓存中是否有相同数据
 		itemCache := databases.ItemCache{}
 		ok, err := databases.QueryItemCache(item_id, &itemCache)
@@ -344,6 +353,15 @@ func main() {
 
 	// 删除商品信息
 	ginServer.DELETE("/:app_local/item/:item_id", DeleteData)
+
+	// 未匹配到任何路由的请求
+	ginServer.NoRoute(func(ctx *gin.Context) {
+		response := ResponseData{}
+		response.Code = 1
+		response.Msg = "未找到相关路由"
+		response.Data = "请检查请求的URL是否正确"
+		ctx.JSON(http.StatusNotFound, response)
+	})
 
 	err = ginServer.Run(":8080")
 	if err != nil {
