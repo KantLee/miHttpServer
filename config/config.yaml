@@ -1,0 +1,55 @@
+server:
+  # 服务端口
+  port: 8080
+
+mysql:
+  # 地址
+  host: 192.168.96.130
+  # 端口
+  port: 3306
+  # 用户名
+  username: root
+  # 密码
+  password: admin
+  # 数据库
+  database: mi_http_server
+  # 字符集
+  charset: utf8mb4
+
+redis:
+  # 地址
+  address: 192.168.96.130:6379
+  # 协议
+  protocal: tcp
+  # 密码
+  password: admin
+  # 数据库
+  database: 1
+  # 命名空间前缀
+  prefix: mi_http_server
+  # 最大空闲连接数
+  maxIdle: 16
+  # 最大连接数
+  maxActive: 32
+  # 缓存过期时间（秒）
+  expire: 3600
+  # 连接超时时间（秒）
+  timeout: 20
+  # 读取超时时间（秒）
+  readTimeout: 10
+  # 写入超时时间（秒）
+  writeTimeout: 10
+
+code:
+  # 成功的状态码（对应200）
+  success: 0
+  # 客户端请求时的错误状态码（对应400）
+  requestError: 1
+  # 服务端处理时的错误状态码（对应500）
+  serverError: 2
+
+lock:
+  # 分布式锁的过期时间（秒）
+  expireSec: 10
+  # 获取分布式锁的等待时间（秒）
+  waitSec: 10

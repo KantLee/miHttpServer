@@ -2,17 +2,12 @@ package middlewares
 
 import (
 	"fmt"
+	"miHttpServer/models"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
-
-type ResponseData struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data interface{} `json:"data"`
-}
 
 // 自定义控制台日志输出格式
 func CustomConsoleLogger(params gin.LogFormatterParams) string {
@@ -53,10 +48,9 @@ func CustomFileLogger(ginLogFile *os.File) gin.HandlerFunc {
 // 根据请求URL的app_local参数设置请求头
 func SetAppLocal() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		response := ResponseData{}
+		response := models.ResponseData{}
 		appLocal := ctx.Param("app_local")
 		if appLocal == "" {
-			// @warn: 错误处理组件
 			response.Code = 1
 			response.Msg = "请求参数app_local为空"
 			response.Data = "缺少app_local参数，应为uk、jp和ru中的一个，例如http://localhost:8080/uk/item/"

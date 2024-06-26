@@ -1,12 +1,13 @@
 module miHttpServer
 
-go 1.18
+go 1.22.4
 
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gomodule/redigo v1.9.2
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.6.0
+	gopkg.in/yaml.v3 v3.0.1
 	xorm.io/xorm v1.3.9
 )
 
@@ -39,6 +40,5 @@ require (
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	xorm.io/builder v0.3.11-0.20220531020008-1bd24a7dc978 // indirect
 )

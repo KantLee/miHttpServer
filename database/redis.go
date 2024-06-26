@@ -1,46 +1,53 @@
-package databases
+package database
 
 import (
 	"encoding/json"
 	"log"
-	"miHttpServer/configs"
+	"miHttpServer/config"
+	"miHttpServer/models"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
 )
 
-// 商品缓存结构体
-type ItemCache struct {
-	ItemID int64   `json:"item_id"`
-	Name   string  `json:"name"`
-	Price  float64 `json:"price"`
-}
-
 // 存储Redis连接池的实例
 var pool *redis.Pool
 
 // Redis的命名空间
-var namespace = configs.RedisConfig["namespace"].(string)
+var namespace string
 
 // Redis的缓存过期时间
-var expireTime = configs.RedisConfig["expire"].(int)
+var expireTime int
 
 // 初始化Redis连接池
 func InitRedis() {
+	// 从配置文件读取Redis的配置信息
+	timeout := time.Duration(config.Configs.Redis.Timeout) * time.Second
+	maxIdle := config.Configs.Redis.MaxIdle
+	idleTimeout := config.Configs.Redis.MaxActive
+	protocal := config.Configs.Redis.Protocal
+	address := config.Configs.Redis.Address
+	password := config.Configs.Redis.Password
+	db := config.Configs.Redis.Database
+	readTimeout := time.Duration(config.Configs.Redis.ReadTimeout) * time.Second
+	writeTimeout := time.Duration(config.Configs.Redis.WriteTimeout) * time.Second
+	namespace = config.Configs.Redis.Prefix
+	expireTime = config.Configs.Redis.Expire
 	pool = &redis.Pool{
-		MaxIdle:     16,                // 最大空闲连接数
-		MaxActive:   32,                // 最大连接数
-		IdleTimeout: 120 * time.Second, // 超时时间
+		MaxIdle:     maxIdle,     // 最大空闲连接数
+		MaxActive:   idleTimeout, // 最大连接数
+		IdleTimeout: timeout,     // 超时时间
 		// 创建与Redis服务器的连接
 		Dial: func() (redis.Conn, error) {
 			conn, err := redis.Dial(
-				"tcp",
-				"192.168.96.130:6379",
-				redis.DialPassword("admin"),
-				redis.DialDatabase(1),
-				redis.DialReadTimeout(10*time.Second),
-				redis.DialWriteTimeout(10*time.Second),
+				protocal,
+				address,
+				redis.DialPassword(password),
+				redis.DialDatabase(db),
+				redis.DialReadTimeout(readTimeout),
+				redis.DialWriteTimeout(writeTimeout),
 			)
 			if err != nil {
 				log.Fatalf("Redis连接失败：%s", err)
@@ -73,8 +80,8 @@ func CloseRedis() {
 	}
 }
 
-// 增加商品缓存
-func AddItemCache(itemID int64, itemCache ItemCache) error {
+// 增加商品
+func AddItemCache(itemID int64, itemCache models.ItemCache) error {
 	itemJson, err := json.Marshal(itemCache)
 	if err != nil {
 		return err
@@ -88,8 +95,8 @@ func AddItemCache(itemID int64, itemCache ItemCache) error {
 	return err
 }
 
-// 获取商品缓存
-func QueryItemCache(itemID int64, itemCache *ItemCache) (bool, error) {
+// 获取商品
+func QueryItemCache(itemID int64, itemCache *models.ItemCache) (bool, error) {
 	conn := pool.Get()
 	defer conn.Close()
 
@@ -108,8 +115,8 @@ func QueryItemCache(itemID int64, itemCache *ItemCache) (bool, error) {
 	return true, nil
 }
 
-// 修改商品缓存
-func UpdateItemCache(itemID int64, itemCache ItemCache) error {
+// 修改商品
+func UpdateItemCache(itemID int64, itemCache models.ItemCache) error {
 	itemJson, err := json.Marshal(itemCache)
 	if err != nil {
 		return err
@@ -122,7 +129,7 @@ func UpdateItemCache(itemID int64, itemCache ItemCache) error {
 	return err
 }
 
-// 删除商品缓存
+// 删除商品
 func DeleteItemCache(itemID int64) error {
 	conn := pool.Get()
 	defer conn.Close()
@@ -136,14 +143,9 @@ func DeleteItemCache(itemID int64) error {
 func Lock(key string, requestID string, expireSec uint64, maxWait time.Duration) (bool, error) {
 	conn := pool.Get()
 	defer conn.Close()
-
 	for startTime := time.Now(); time.Since(startTime) < maxWait; {
-
 		ok, err := SetNx(conn, key, requestID, expireSec)
 		if err != nil {
-			// @warn 错误信息向上传递，而不是记录日志。日志没有额外信息透出时，尽量只在处理终止时记录
-			// "github.com/pkg/errors"是个不错的库，errors.Wrap(err, "获取分布式锁失败", + ",key:" + key)
-			log.Println("获取分布式锁失败", ",key:", key, ",error:", err)
 			return false, err
 		}
 		if ok {
@@ -151,46 +153,51 @@ func Lock(key string, requestID string, expireSec uint64, maxWait time.Duration)
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	log.Println("获取分布式锁超时", ",key:", key)
 	return false, nil
 }
 
 // Unlock 释放分布式锁
-func Unlock(key string) error {
+func Unlock(key, value string) error {
 	conn := pool.Get()
 	defer conn.Close()
-	// @warn 无唯一 ID 校验，可能会造成其他其他协程误释放
-	_, err := Del(conn, key)
+
+	// 先检查是否是自己的锁
+	id, err := redis.String(conn.Do("GET", key))
 	if err != nil {
-		log.Println("释放锁失败", ",key:", key, ",error:", err)
+		if strings.Contains(err.Error(), "redigo: nil returned") {
+			// 锁已经过期，键也会被删除
+			return nil
+		}
 		return err
-	} else {
-		log.Println("释放锁成功", ",key:", key)
+	}
+
+	if id != value {
+		// 不能释放别人的锁（说明锁到期已经被释放过了）
 		return nil
 	}
+
+	// 执行到这里说明键是存在的，且是自己的锁
+	_, err = redis.Int(conn.Do("DEL", key))
+	if err != nil {
+		return err
+	}
+
+	// 释放成功
+	return nil
 }
 
 // SetNx 设置键值对，如果键不存在
 func SetNx(conn redis.Conn, key string, value string, seconds uint64) (bool, error) {
 	// "EX" 表示过期时间，"NX" 表示只有键不存在时才设置
 	res, err := redis.String(conn.Do("SET", key, value, "EX", seconds, "NX"))
-	if err == redis.ErrNil {
-		// 键已存在
-		return false, nil
-	} else if err != nil {
-		log.Println("SetNx Error: ", err)
-		return false, err
-	}
-	log.Println("Redis SetNx", ",key:", key, ",seconds:", seconds, ",res:", res)
-	return res == "OK", nil
-}
-
-// Del 删除键
-func Del(conn redis.Conn, key string) (bool, error) {
-	_, err := redis.Int(conn.Do("DEL", key))
 	if err != nil {
-		log.Println("删除键错误，err", "err", err)
+		// 设置失败，发生错误
 		return false, err
 	}
-	return true, nil
+	if res == "OK" {
+		// 键不存在，设置成功
+		return true, nil
+	}
+	// 键已存在，说明分布式锁还未被释放
+	return false, nil
 }
