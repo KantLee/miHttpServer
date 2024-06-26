@@ -33,3 +33,6 @@ type RequestData struct {
 	Name  string  `json:"name"`
 	Price float64 `json:"price"`
 }
+
+// 删除商品时保存item_id和删除时间
+var ItemDeleteTime = make(map[int64]string, 20)

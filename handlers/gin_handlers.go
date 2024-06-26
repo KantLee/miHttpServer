@@ -224,10 +224,27 @@ func QueryItem(ctx *gin.Context) {
 
 // 删除商品信息（如果缓存中也存在，需要同步删除）
 func DeleteItem(ctx *gin.Context) {
+	itemIDStr := ctx.Param("item_id")
+	var response models.ResponseData
+	item_id, err := strconv.ParseInt(itemIDStr, 10, 64)
+	if err != nil {
+		response = utils.DealRequestError("item_id非法", err)
+		ctx.JSON(http.StatusBadRequest, response)
+		return
+	}
+
+	deleteTime := make(map[string]interface{}, 1)
+	// 先检查是否已经被删除，保证幂等性
+	if deleteItemTime, exist := models.ItemDeleteTime[item_id]; exist {
+		deleteTime["delete_time"] = deleteItemTime
+		response = utils.DealSuccess("成功", deleteTime)
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
 	// 获取当前的UTC时间
 	utcNow := time.Now().UTC()
 	var location *time.Location
-	var err error
 	appLocal := ctx.Param("app_local")
 	var localCountry string
 	switch appLocal {
@@ -246,15 +263,6 @@ func DeleteItem(ctx *gin.Context) {
 	// 格式化时间
 	formattedTime := localTime.Format("2006-01-02 15:04:05")
 
-	itemIDStr := ctx.Param("item_id")
-	var response models.ResponseData
-	item_id, err := strconv.ParseInt(itemIDStr, 10, 64)
-	if err != nil {
-		response = utils.DealRequestError("item_id非法", err)
-		ctx.JSON(http.StatusBadRequest, response)
-		return
-	}
-
 	n, err := database.DeleteItem(item_id)
 	if err != nil {
 		response = utils.DealServerError("删除数据失败", err)
@@ -270,11 +278,13 @@ func DeleteItem(ctx *gin.Context) {
 		return
 	}
 
-	deleteTime := make(map[string]interface{}, 1)
 	deleteTime["delete_time"] = formattedTime
 	response = utils.DealSuccess("成功", deleteTime)
 	ctx.JSON(http.StatusOK, response)
 	log.Printf("%s站点删除商品，item_id: %d，当地时间：%s", localCountry, item_id, formattedTime)
+
+	// 将删除时间存入map
+	models.ItemDeleteTime[item_id] = formattedTime
 
 	// 查找redis缓存中是否有相同数据，有则删除
 	err = caches.DeleteItemCache(item_id)
