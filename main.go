@@ -30,6 +30,7 @@ type ResponseData struct {
 func AddData(ctx *gin.Context) {
 	data, _ := ctx.GetRawData()
 	var response ResponseData
+	// @warn 定义具体 struct 而不是 interface
 	var jsonStr map[string]interface{}
 	err := json.Unmarshal(data, &jsonStr)
 	// 这个只能判断json的key类型是否正确，不能判断value的类型是否正确
@@ -48,12 +49,15 @@ func AddData(ctx *gin.Context) {
 		response.Code = 1
 		response.Msg = "无法获取锁"
 		response.Data = "请稍后再试"
+		// @warn err丢了，出错问题怎么查
 		ctx.JSON(http.StatusConflict, response)
 		return
 	}
 	defer databases.Unlock(lockKey) // 确保最后释放锁
 
-	// 如果json的value类型不正确，会导致panic
+	//@warn recover 地方一般分两种
+	// 1. 顶层 recover，比如中间件很合适
+	// 2. 新的 goroutine 起来了，需要单独recover
 	defer func() {
 		if err := recover(); err != nil {
 			response.Code = 1
@@ -118,6 +122,7 @@ func UpdateData(ctx *gin.Context) {
 		response.Code = 1
 		response.Msg = "无法获取锁"
 		response.Data = "请稍后再试"
+		// @warn 自定义 code和 http code 的关系是什么，你是如何定义的？客户端应如何处理？
 		ctx.JSON(http.StatusConflict, response)
 		return
 	}
@@ -284,6 +289,7 @@ func DeleteData(ctx *gin.Context) {
 		return
 	}
 
+	// @warn 要符合幂等性，多次删除是，删除时间应是不变的。如何实现？
 	n, err := databases.DeleteItem(item_id)
 	if err != nil {
 		response.Code = 1
@@ -340,6 +346,7 @@ func main() {
 	// 设置Gin日志文件
 	ginLogFile, err := os.Create("./logs/gin.log")
 	if err != nil {
+		// @warn: 启动时有问题，直接 panic 即可，便于及时发现问题止损
 		log.Printf("无法创建Gin日志文件: %v\n", err)
 	}
 	defer ginLogFile.Close()
