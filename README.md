@@ -1,6 +1,39 @@
 # miHttpServer
 
-本项目为使用Golang编写的Http服务，提供商品信息管理功能。
+## 项目演示
+
+### 增加商品
+
+增加商品
+
+![增加商品](https://pic.rmb.bdstatic.com/bjh/240627/9fc9515c0f7b4cbce0f531f4d34085d25490.png)
+
+操作结果
+![增加结果](https://pic.rmb.bdstatic.com/bjh/240627/8024b5b2976182bdb359fa87da228e876727.png)
+
+### 查询商品
+
+![查询商品](https://pic.rmb.bdstatic.com/bjh/240627/3fe683e4f25975b518e67be1efe8838f3754.png)
+
+### 修改商品
+
+修改商品
+
+![修改商品](https://pic.rmb.bdstatic.com/bjh/240627/6251cbf66fb618f1d31bb4789ad2559e6975.png)
+
+操作结果
+
+![操作结果](https://pic.rmb.bdstatic.com/bjh/240627/cb16d43271926001d6bafea86c771a226841.png)
+
+### 删除商品
+
+删除商品
+
+![删除商品](https://pic.rmb.bdstatic.com/bjh/240627/3f740c30e75803f63175bf8f55f72f9e5885.png)
+
+操作结果
+
+![操作结果](https://pic.rmb.bdstatic.com/bjh/240627/7e66db6a9047a83b3d6b245d693d10077380.png)
 
 ## 开发目标
 
