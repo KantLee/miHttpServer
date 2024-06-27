@@ -4,11 +4,12 @@ package config
 var Configs Config
 
 type Config struct {
-	Redis  RedisConfig  `yaml:"redis"`
-	MySQL  MysqlConfig  `yaml:"mysql"`
-	Server ServerConfig `yaml:"server"`
-	Code   CodeConfig   `yaml:"code"`
-	Lock   LockConfig   `yaml:"lock"`
+	Redis      RedisConfig      `yaml:"redis"`
+	MySQL      MysqlConfig      `yaml:"mysql"`
+	Server     ServerConfig     `yaml:"server"`
+	Code       CodeConfig       `yaml:"code"`
+	Lock       LockConfig       `yaml:"lock"`
+	LocalCache LocalCacheConfig `yaml:"localCache"`
 }
 
 // redis的配置项
@@ -52,4 +53,10 @@ type CodeConfig struct {
 type LockConfig struct {
 	ExpireSec uint64 `yaml:"expireSec"`
 	WaitSec   int    `yaml:"waitSec"`
+}
+
+// 本地缓存配置项
+type LocalCacheConfig struct {
+	Capacity  int `yaml:"capacity"`
+	ExpireSec int `yaml:"expireSec"`
 }

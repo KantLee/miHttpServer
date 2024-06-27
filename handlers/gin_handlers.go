@@ -158,6 +158,14 @@ func UpdateItem(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 	log.Printf("修改商品，item_id: %d，name：%s", item.ItemID, item.Name)
 
+	// 查找本地缓存中是否有相同的数据，有则更新本地缓存
+	itemCache := models.ItemCache{
+		ItemID: item.ItemID,
+		Name:   item.Name,
+		Price:  item.Price,
+	}
+	caches.UpdateLocalCache(item_id, itemCache)
+
 	// 查找redis缓存中是否有相同数据，有则更新redis缓存
 	err = caches.UpdateRedisCache(item_id, item)
 	if err != nil {
@@ -176,8 +184,16 @@ func QueryItem(ctx *gin.Context) {
 		return
 	}
 
+	// 从本地缓存中查询数据
+	ok, storeInfo := caches.QueryLocalCache(item_id)
+	if ok {
+		response = utils.DealSuccess("成功", storeInfo)
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
 	// 从redis缓存中查询数据
-	err, storeInfo := caches.QueryRedisCache(item_id)
+	err, storeInfo = caches.QueryRedisCache(item_id)
 	if err != nil {
 		log.Printf("查询商品%d的Redis缓存失败: %s", item_id, err.Error())
 	} else {
@@ -185,6 +201,13 @@ func QueryItem(ctx *gin.Context) {
 			// 说明缓存中有数据
 			response = utils.DealSuccess("成功", storeInfo)
 			ctx.JSON(http.StatusOK, response)
+			// 将数据添加到本地缓存中
+			itemCache := models.ItemCache{
+				ItemID: item_id,
+				Name:   storeInfo["store_info"].(map[string]interface{})["name"].(string),
+				Price:  storeInfo["store_info"].(map[string]interface{})["price"].(float64),
+			}
+			caches.AddLocalCache(item_id, itemCache)
 			return
 		}
 	}
@@ -214,6 +237,14 @@ func QueryItem(ctx *gin.Context) {
 	}
 	response = utils.DealSuccess("成功", storeInfo)
 	ctx.JSON(http.StatusOK, response)
+
+	// 将数据存入本地缓存
+	itemCache := models.ItemCache{
+		ItemID: item.ItemID,
+		Name:   item.Name,
+		Price:  item.Price,
+	}
+	caches.AddLocalCache(item_id, itemCache)
 
 	// 将数据存入Redis缓存
 	err = caches.AddRedisCache(item_id, item)
@@ -285,6 +316,9 @@ func DeleteItem(ctx *gin.Context) {
 
 	// 将删除时间存入map
 	models.ItemDeleteTime[item_id] = formattedTime
+
+	// 查找本地缓存中是否有相同的数据，有同步删除
+	caches.DeleteLocalCache(item_id)
 
 	// 查找redis缓存中是否有相同数据，有则删除
 	err = caches.DeleteItemCache(item_id)

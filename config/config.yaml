@@ -53,3 +53,9 @@ lock:
   expireSec: 10
   # 获取分布式锁的等待时间（秒）
   waitSec: 10
+
+localCache:
+  # 本地缓存的最大容量
+  capacity: 1000
+  # 本地缓存的过期时间（秒）
+  expireSec: 60

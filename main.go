@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"miHttpServer/caches"
 	"miHttpServer/config"
 	"miHttpServer/database"
 	"miHttpServer/handlers"
@@ -55,6 +56,10 @@ func main() {
 	database.InitRedis()
 	// 关闭redis连接
 	defer database.CloseRedis()
+
+	// 初始化本地缓存
+	caches.LocalCache = caches.NewLRUCache(config.Configs.LocalCache.Capacity)
+	log.Println("初始化本地缓存成功")
 
 	// 增加商品信息（从JSON获取）
 	ginServer.PUT("/:app_local/item", handlers.AddItem)
