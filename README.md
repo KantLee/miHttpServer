@@ -1,5 +1,13 @@
 # miHttpServer
 
+## 开发环境
+1. go 1.22.4
+2. mysql 8.4.0
+3. redis 7.2.5
+4. Gin后端框架 github.com/gin-gonic/gin
+5. 操作MySQL的库 xorm.io/xorm
+6. 操作Redis的库 github.com/gomodule/redigo/redis
+
 ## 项目演示
 
 ### 增加商品
